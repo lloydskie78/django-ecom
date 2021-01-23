@@ -1,5 +1,7 @@
 import json
+import stripe
 
+from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 
@@ -9,6 +11,58 @@ from apps.order.utils import checkout
 
 from .models import Product
 from apps.order.models import Order
+
+
+def create_checkout_session(request):
+    cart = Cart(request)
+
+    stripe.api_key = settings.STRIPE_API_KEY_HIDDEN
+
+    items = []
+
+    for item in cart:
+        product = item["product"]
+
+        obj = {
+            "price_data": {
+                "currency": "usd",
+                "product_data": {"name": product.title},
+                "unit_amount": int(product.price * 100),
+            },
+            "quantity": item["quantity"],
+        }
+
+        items.append(obj)
+
+    session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        line_items=items,
+        mode="payment",
+        success_url="http://localhost:8000/cart/success/",
+        cancel_url="http://localhost:8000/cart/",
+    )
+
+    #
+
+    # Create order
+
+    data = json.loads(request.body)
+    first_name = data["first_name"]
+    last_name = data["last_name"]
+    email = data["email"]
+    address = data["address"]
+    zipcode = data["zipcode"]
+    place = data["place"]
+    payment_intent = session.payment_intent
+
+    orderid = checkout(request, first_name, last_name, email, address, zipcode, place)
+
+    order = Order.objects.get(pk=orderid)
+    order.payment_intent = payment_intent
+    order.save()
+
+    #
+    return JsonResponse({"session": session})
 
 
 def api_checkout(request):
@@ -39,8 +93,6 @@ def api_checkout(request):
 
 
 def api_add_to_cart(request):
-
-    print("This is the body : ", request.body)
 
     data = json.loads(request.body)
     jsonresponse = {"success": True}

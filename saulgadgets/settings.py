@@ -40,7 +40,7 @@ CART_SESSION_ID = "cart"
 
 # Application definition
 
-INSTALLED_APPS = [
+INSTALLED_APPS = [  
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "apps.core",
+    "apps.coupon",
     "apps.order",
     "apps.store",
     "apps.cart",
